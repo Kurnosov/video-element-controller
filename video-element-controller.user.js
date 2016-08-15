@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         video-element-controller
 // @version      0.1
-// @namespace    https://gist.github.com/Kurnosov/{id}
+// @namespace    hhttps://github.com/Kurnosov/video-element-controller
 // @description  Adds useful keyboard shortcuts for HTML5 video.
 // @homepageURL  https://github.com/Kurnosov/video-element-controller
 // @updateURL    https://raw.github.com/Kurnosov/video-element-controller/master/video-element-controller.meta.js
