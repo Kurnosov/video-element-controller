@@ -60,14 +60,16 @@
 
         // grab the video elements and set their playback rate.
         var videoElement = document.getElementsByTagName("video")[0];
-        videoElement.playbackRate = rate;
-        var elapsed = videoElement.duration - videoElement.currentTime;
-        var min = Math.floor(elapsed / 60);
-        var sec = Math.floor(elapsed - min * 60);
-        playbackRateInfo.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (rate > 1 || rate < 1 ? "<br/>" + rate + "x" : "");
+        if (videoElement) {
+            videoElement.playbackRate = rate;
+            var elapsed = videoElement.duration - videoElement.currentTime;
+            var min = Math.floor(elapsed / 60);
+            var sec = Math.floor(elapsed - min * 60);
+            playbackRateInfo.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (rate > 1 || rate < 1 ? "<br/>" + rate + "x" : "");
 
-        if (videoElement && !document.getElementById("playbackrate-indicator")) {
-            videoElement.parentElement.appendChild(playbackRateInfo);
+            if (!document.getElementById("playbackrate-indicator")) {
+                videoElement.parentElement.appendChild(playbackRateInfo);
+            }
         }
     }
 
@@ -126,64 +128,64 @@
     });
 
     // youtube videos don't always load on the DOMContentLoaded event :-/
-    document.addEventListener('DOMNodeInserted', function() {
-        setPlaybackRate(currentPlaybackRate);
-    });
+    // document.addEventListener('DOMNodeInserted', function() {
+    //     setPlaybackRate(currentPlaybackRate);
+    // });
 
 
     // mimic vlc keyboard shortcuts
     window.addEventListener('keydown', function(event) {
-        var keycode = event.charCode || event.keyCode;
-        var oldPlaybackRate = currentPlaybackRate;
-
-        // decrease playback rate if '[' is pressed
-        if (keycode === KeyEvent.DOM_VK_OPEN_BRACKET) {
-            currentPlaybackRate -= tuneSpeedStep + 0.0;
-        }
-
-        // increase playback rate if ']' is pressed
-        if (keycode === KeyEvent.DOM_VK_CLOSE_BRACKET) {
-            currentPlaybackRate += tuneSpeedStep + 0.0;
-        }
-
-        if (keycode === KeyEvent.DOM_VK_DOWN) {
-            if (event.shiftKey) {
-                currentPlaybackRate -= speedStep + 0.0;
-            } else {
-                currentPlaybackRate = 1.0;
-            }
-        }
-
-        if (keycode === KeyEvent.DOM_VK_UP) {
-            currentPlaybackRate += speedStep + 0.0;
-        }
-
-        if (keycode >= KeyEvent.DOM_VK_0 && keycode <= KeyEvent.DOM_VK_9) {
-            setCurrentTime(keycode - 48);
-        }
-
-        if (keycode === KeyEvent.DOM_VK_SPACE) {
-            setPlayPause();
-        }
-
-        if (keycode === KeyEvent.DOM_VK_C) {
-            updateTransformProperty('rotate', (event.shiftKey ? -rotateAngleStep : rotateAngleStep));
-        }
-
-        //173 "-"; 61 "+"
-        if (event.shiftKey) {
-            if (keycode === KeyEvent.DOM_VK_EQUALS) {
-                updateTransformProperty("scale", scaleStep);
-            }
-            if (keycode === KeyEvent.DOM_VK_HYPHEN_MINUS) {
-                updateTransformProperty("scale", -scaleStep);
-            }
-        }
-
         if (document.getElementsByTagName("video")[0]) {
-            event.preventDefault();
-        }
+            var keycode = event.charCode || event.keyCode;
+            var oldPlaybackRate = currentPlaybackRate;
 
-        if (currentPlaybackRate != oldPlaybackRate) setPlaybackRate(currentPlaybackRate);
+            // decrease playback rate if '[' is pressed
+            if (keycode === KeyEvent.DOM_VK_OPEN_BRACKET) {
+                currentPlaybackRate -= tuneSpeedStep + 0.0;
+            }
+
+            // increase playback rate if ']' is pressed
+            if (keycode === KeyEvent.DOM_VK_CLOSE_BRACKET) {
+                currentPlaybackRate += tuneSpeedStep + 0.0;
+            }
+
+            if (keycode === KeyEvent.DOM_VK_DOWN) {
+                if (event.shiftKey) {
+                    currentPlaybackRate -= speedStep + 0.0;
+                } else {
+                    currentPlaybackRate = 1.0;
+                }
+            }
+
+            if (keycode === KeyEvent.DOM_VK_UP) {
+                currentPlaybackRate += speedStep + 0.0;
+            }
+
+            if (keycode >= KeyEvent.DOM_VK_0 && keycode <= KeyEvent.DOM_VK_9) {
+                setCurrentTime(keycode - 48);
+            }
+
+            if (keycode === KeyEvent.DOM_VK_SPACE) {
+                setPlayPause();
+            }
+
+            if (keycode === KeyEvent.DOM_VK_C) {
+                updateTransformProperty('rotate', (event.shiftKey ? -rotateAngleStep : rotateAngleStep));
+            }
+
+            //173 "-"; 61 "+"
+            if (event.shiftKey) {
+                if (keycode === KeyEvent.DOM_VK_EQUALS) {
+                    updateTransformProperty("scale", scaleStep);
+                }
+                if (keycode === KeyEvent.DOM_VK_HYPHEN_MINUS) {
+                    updateTransformProperty("scale", -scaleStep);
+                }
+            }
+
+            event.preventDefault();
+
+            if (currentPlaybackRate != oldPlaybackRate) setPlaybackRate(currentPlaybackRate);
+        }
     }, true);
 }());
