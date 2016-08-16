@@ -69,8 +69,16 @@
 
             if (!document.getElementById("playbackRate-indicator")) {
                 videoElement.parentElement.appendChild(playbackRateInfo);
+                videoElement.addEventListener("timeupdate", function () {
+                    var elapsed = this.duration - this.currentTime;
+                    var min = Math.floor(elapsed / 60);
+                    var sec = Math.floor(elapsed - min * 60);
+                    playbackRateInfo.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (currentPlaybackRate > 1 || currentPlaybackRate < 1 ? "<br/>" + rate + "x" : "");
+                }, false);
             }
+            
         }
+
     }
 
     function setCurrentTime(seek) {
