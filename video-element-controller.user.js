@@ -16,12 +16,12 @@
 // @include      http*://2ch.hk/*
 // @include      http*://arhivach.org/*
 // @include      *
-// @grant        GM_log
+// @grant       none
 // ==/UserScript==
-
 
 (function() {
     'use strict';
+
     var currentPlaybackRate = 1.0; // default playback rate.
     var speedStep = 0.5;
     var tuneSpeedStep = 0.1;
@@ -67,7 +67,7 @@
             var sec = Math.floor(elapsed - min * 60);
             playbackRateInfo.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (rate > 1 || rate < 1 ? "<br/>" + rate + "x" : "");
 
-            if (!document.getElementById("playbackrate-indicator")) {
+            if (!document.getElementById("playbackRate-indicator")) {
                 videoElement.parentElement.appendChild(playbackRateInfo);
             }
         }
@@ -127,11 +127,9 @@
         setPlaybackRate(currentPlaybackRate);
     });
 
-    // youtube videos don't always load on the DOMContentLoaded event :-/
-    // document.addEventListener('DOMNodeInserted', function() {
-    //     setPlaybackRate(currentPlaybackRate);
-    // });
-
+    window.addEventListener('loadedmetadata', function() {
+        setPlaybackRate(currentPlaybackRate);
+    }, true);
 
     // mimic vlc keyboard shortcuts
     window.addEventListener('keydown', function(event) {
@@ -161,31 +159,39 @@
                 currentPlaybackRate += speedStep + 0.0;
             }
 
+            var isHooked = currentPlaybackRate != oldPlaybackRate;
             if (keycode >= KeyEvent.DOM_VK_0 && keycode <= KeyEvent.DOM_VK_9) {
                 setCurrentTime(keycode - 48);
+                isHooked = true;
             }
 
             if (keycode === KeyEvent.DOM_VK_SPACE) {
                 setPlayPause();
+                isHooked = true;
             }
 
             if (keycode === KeyEvent.DOM_VK_C) {
                 updateTransformProperty('rotate', (event.shiftKey ? -rotateAngleStep : rotateAngleStep));
+                isHooked = true;
             }
 
             //173 "-"; 61 "+"
             if (event.shiftKey) {
                 if (keycode === KeyEvent.DOM_VK_EQUALS) {
                     updateTransformProperty("scale", scaleStep);
+                    isHooked = true;
                 }
                 if (keycode === KeyEvent.DOM_VK_HYPHEN_MINUS) {
                     updateTransformProperty("scale", -scaleStep);
+                    isHooked = true;
                 }
             }
 
-            event.preventDefault();
-
-            if (currentPlaybackRate != oldPlaybackRate) setPlaybackRate(currentPlaybackRate);
+            
+            if (isHooked) {
+                setPlaybackRate(currentPlaybackRate);
+                event.preventDefault();
+            }
         }
     }, true);
 }());
