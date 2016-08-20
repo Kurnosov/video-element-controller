@@ -6,6 +6,7 @@
 // @homepageURL  https://github.com/Kurnosov/video-element-controller
 // @updateURL    https://raw.github.com/Kurnosov/video-element-controller/master/video-element-controller.meta.js
 // @downloadURL  https://raw.github.com/Kurnosov/video-element-controller/master/video-element-controller.user.js
+// @require      https://raw.githubusercontent.com/madrobby/keymaster/master/keymaster.js
 // @run-at       document-start
 // @include      http*://*.youtube.com/*
 // @include      http*://*.gfycat.com/*
@@ -16,5 +17,5 @@
 // @include      http*://2ch.hk/*
 // @include      http*://arhivach.org/*
 // @include      *
-// @grant        GM_log
+// @grant        none
 // ==/UserScript==
