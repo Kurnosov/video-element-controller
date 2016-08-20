@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         video-element-controller
 // @version      0.1
-// @namespace    hhttps://github.com/Kurnosov/video-element-controller
+// @namespace    https://github.com/Kurnosov/video-element-controller
 // @description  Adds useful keyboard shortcuts for HTML5 video.
 // @homepageURL  https://github.com/Kurnosov/video-element-controller
 // @updateURL    https://raw.github.com/Kurnosov/video-element-controller/master/video-element-controller.meta.js
 // @downloadURL  https://raw.github.com/Kurnosov/video-element-controller/master/video-element-controller.user.js
+// @require      https://raw.githubusercontent.com/madrobby/keymaster/master/keymaster.js
 // @run-at       document-start
 // @include      http*://*.youtube.com/*
 // @include      http*://*.gfycat.com/*
@@ -16,74 +17,120 @@
 // @include      http*://2ch.hk/*
 // @include      http*://arhivach.org/*
 // @include      *
-// @grant       none
+// @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    var currentPlaybackRate = 1.0; // default playback rate.
-    var speedStep = 0.5;
-    var tuneSpeedStep = 0.1;
-    var rotateAngleStep = 90;
+    var currentPlaybackRate = 1.0; // x default playback rate.
+    var playRateTuneStep = 0.5;
+    var playRateFineTuneStep = 0.1;
+    var rotateAngleStep = 90; // by degrees
     var scaleStep = 0.25;
+    var seekStep = 10; // % use percentage
+    var videoHotkeysScope = "videohotkeys";
 
-    if (typeof document.KeyEvent == "undefined") {
-        var KeyEvent = {
-            DOM_VK_SPACE: 32,
-            DOM_VK_UP: 38,
-            DOM_VK_DOWN: 40,
-            DOM_VK_0: 48,
-            DOM_VK_9: 57,
-            DOM_VK_EQUALS: 61,
-            DOM_VK_C: 67,
-            DOM_VK_HYPHEN_MINUS: 173,
-            DOM_VK_OPEN_BRACKET: 219,
-            DOM_VK_CLOSE_BRACKET: 221
-        };
-    }
+    
+    var k = key.noConflict();
+    k.setScope(videoHotkeysScope);
+    k("h, shift+h", videoHotkeysScope, function() { toggleVideoInfoOverlay(); return false; });
+    k("space", videoHotkeysScope, function() { setPlayPause(); return false; });
+    k("[", videoHotkeysScope, function() { setPlaybackRate(-playRateFineTuneStep); return false; });
+    k("]", videoHotkeysScope, function() { setPlaybackRate(+playRateFineTuneStep); return false; });
+    k("up", videoHotkeysScope, function() { setPlaybackRate(+playRateTuneStep); return false; });
+    k("shift+down", videoHotkeysScope, function() { setPlaybackRate(-playRateTuneStep); return false; });
+    k("down", videoHotkeysScope, function() { setPlaybackRate(1.0 - currentPlaybackRate); return false; });
+    k("0,1,2,3,4,5,6,7,8,9", videoHotkeysScope, function(event) { setCurrentTime(event.keyCode - 48); return false; });
+    k("shift+left", videoHotkeysScope, function() { seekByStep(-seekStep);return false; });
+    k("shift+right", videoHotkeysScope, function() { seekByStep(+seekStep);return false; });
+    k("z", videoHotkeysScope, function() { updateTransformProperty("scale", +scaleStep); return false; });
+    k("shift+z", videoHotkeysScope, function() { updateTransformProperty("scale", -scaleStep); return false; });
+    k("c, r", videoHotkeysScope, function() { updateTransformProperty('rotate', +rotateAngleStep); });
+    k("shift+c, shift+r", videoHotkeysScope, function() { updateTransformProperty('rotate', -rotateAngleStep); return false; });
 
-    var playbackRateInfo = document.createElement("h1");
-    playbackRateInfo.setAttribute("id", "playbackrate-indicator");
-    playbackRateInfo.style.position = "absolute";
-    playbackRateInfo.style.top = "1px";
-    playbackRateInfo.style.right = "0.5%";
-    playbackRateInfo.style.color = "rgba(255, 0, 0, 1)";
-    playbackRateInfo.style.zIndex = "99999"; // ensures that it shows above other elements.
-    playbackRateInfo.style.visibility = "visible";
-    playbackRateInfo.style.fontSize = "1em";
+    k.filter = function(event) {
+        if (document.getElementById(videoInfoOverlay.getAttribute("id"))) {
+            var tagName = (event.target || event.srcElement).tagName;
+            return true && !(tagName == 'INPUT' || tagName == 'SELECT' || tagName == 'TEXTAREA');
+        }
+        return false;
+    };
+
+    var videoInfoOverlay = document.createElement("h1");
+    videoInfoOverlay.setAttribute("id", "video-info-overlay");
+    videoInfoOverlay.style.position = "absolute";
+    videoInfoOverlay.style.top = "1px";
+    videoInfoOverlay.style.right = "0.5%";
+    videoInfoOverlay.style.color = "rgba(255, 0, 0, 1)";
+    videoInfoOverlay.style.zIndex = "99999"; // ensures that it shows above other elements.
+    videoInfoOverlay.style.visibility = "visible";
+    videoInfoOverlay.style.fontSize = "1em";
 
     function setPlaybackRate(rate) {
+        if (rate && currentPlaybackRate + rate >= 0) {
+            currentPlaybackRate += rate;
+        } 
+
         // fix floating point errors like 1.1 + 0.1 = 1.2000000000000002.
-        var step = rate % speedStep === 0 ? speedStep : tuneSpeedStep;
-        rate = Math.round(rate * (1 / step)) / (1 / step);
+        var step = currentPlaybackRate % playRateTuneStep === 0 ? playRateTuneStep : playRateFineTuneStep;
+        currentPlaybackRate = Math.round(currentPlaybackRate * (1 / step)) / (1 / step);
 
         // grab the video elements and set their playback rate.
         var videoElement = document.getElementsByTagName("video")[0];
         if (videoElement) {
-            videoElement.playbackRate = rate;
+            videoElement.playbackRate = currentPlaybackRate;
             var elapsed = videoElement.duration - videoElement.currentTime;
             var min = Math.floor(elapsed / 60);
             var sec = Math.floor(elapsed - min * 60);
-            playbackRateInfo.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (rate > 1 || rate < 1 ? "<br/>" + rate + "x" : "");
+            videoInfoOverlay.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (currentPlaybackRate > 1 || currentPlaybackRate < 1 ? "<br />" + currentPlaybackRate + "x" : "");
 
-            if (!document.getElementById("playbackRate-indicator")) {
-                videoElement.parentElement.appendChild(playbackRateInfo);
-                videoElement.addEventListener("timeupdate", function () {
+            if (!document.getElementById(videoInfoOverlay.getAttribute("id"))) {
+
+                videoElement.parentElement.appendChild(videoInfoOverlay);
+
+                videoElement.addEventListener('timeupdate', function() {
                     var elapsed = this.duration - this.currentTime;
                     var min = Math.floor(elapsed / 60);
                     var sec = Math.floor(elapsed - min * 60);
-                    playbackRateInfo.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (currentPlaybackRate > 1 || currentPlaybackRate < 1 ? "<br/>" + rate + "x" : "");
+                    videoInfoOverlay.innerHTML = (min > 0 ? min + "m" + sec : sec) + "s" + (currentPlaybackRate > 1 || currentPlaybackRate < 1 ? "<br/>" + currentPlaybackRate + "x" : "");
                 }, false);
-            }
-            
-        }
 
+                // var observer = new MutationObserver(function(mutations) {
+                //     mutations.forEach(function(mutation) {
+                //         var name = mutation.attributeName,
+                //         newValue = mutation.target.getAttribute(name),
+                //         oldValue = mutation.oldValue;
+                //         if (name == 'src') {
+                //             if (!newValue) {
+                //             } else {
+                //             }
+                //         }
+                //             // observer.disconnect();
+                //     });
+                // });
+
+                // observer.observe(videoElement, {
+                //     attributes: true,
+                // });
+            }
+        }
+    }
+
+    function toggleVideoInfoOverlay() {
+        videoInfoOverlay.style.visibility = videoInfoOverlay.style.visibility === "visible" ? "hidden" : "visible";
     }
 
     function setCurrentTime(seek) {
         var videoElement = document.getElementsByTagName("video")[0];
         videoElement.currentTime = videoElement.duration * (seek * 0.1);
+    }
+
+    function seekByStep(seek) {
+        var videoElement = document.getElementsByTagName("video")[0];
+        if (videoElement) {
+            videoElement.currentTime += videoElement.duration / seek;
+        }
     }
 
     function setPlayPause() {
@@ -131,75 +178,10 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        setPlaybackRate(currentPlaybackRate);
-    });
-
     window.addEventListener('loadedmetadata', function() {
-        setPlaybackRate(currentPlaybackRate);
+        setPlaybackRate(null);
     }, true);
+    // window.addEventListener('beforeunload', function() {
 
-    // mimic vlc keyboard shortcuts
-    window.addEventListener('keydown', function(event) {
-        if (document.getElementsByTagName("video")[0]) {
-            var keycode = event.charCode || event.keyCode;
-            var oldPlaybackRate = currentPlaybackRate;
-
-            // decrease playback rate if '[' is pressed
-            if (keycode === KeyEvent.DOM_VK_OPEN_BRACKET) {
-                currentPlaybackRate -= tuneSpeedStep + 0.0;
-            }
-
-            // increase playback rate if ']' is pressed
-            if (keycode === KeyEvent.DOM_VK_CLOSE_BRACKET) {
-                currentPlaybackRate += tuneSpeedStep + 0.0;
-            }
-
-            if (keycode === KeyEvent.DOM_VK_DOWN) {
-                if (event.shiftKey) {
-                    currentPlaybackRate -= speedStep + 0.0;
-                } else {
-                    currentPlaybackRate = 1.0;
-                }
-            }
-
-            if (keycode === KeyEvent.DOM_VK_UP) {
-                currentPlaybackRate += speedStep + 0.0;
-            }
-
-            var isHooked = currentPlaybackRate != oldPlaybackRate;
-            if (keycode >= KeyEvent.DOM_VK_0 && keycode <= KeyEvent.DOM_VK_9) {
-                setCurrentTime(keycode - 48);
-                isHooked = true;
-            }
-
-            if (keycode === KeyEvent.DOM_VK_SPACE) {
-                setPlayPause();
-                isHooked = true;
-            }
-
-            if (keycode === KeyEvent.DOM_VK_C) {
-                updateTransformProperty('rotate', (event.shiftKey ? -rotateAngleStep : rotateAngleStep));
-                isHooked = true;
-            }
-
-            //173 "-"; 61 "+"
-            if (event.shiftKey) {
-                if (keycode === KeyEvent.DOM_VK_EQUALS) {
-                    updateTransformProperty("scale", scaleStep);
-                    isHooked = true;
-                }
-                if (keycode === KeyEvent.DOM_VK_HYPHEN_MINUS) {
-                    updateTransformProperty("scale", -scaleStep);
-                    isHooked = true;
-                }
-            }
-
-            
-            if (isHooked) {
-                setPlaybackRate(currentPlaybackRate);
-                event.preventDefault();
-            }
-        }
-    }, true);
+    // }, true);
 }());
